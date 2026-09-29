@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/api.ts","./src/main.tsx","./src/vite-env.d.ts","./src/pages/Alertas.tsx","./src/pages/Culturas.tsx","./src/pages/Dashboard.tsx","./src/pages/Login.tsx","./src/pages/Logistica.tsx","./src/pages/Lotes.tsx","./src/pages/Mercado.tsx","./src/pages/Propriedades.tsx","./src/pages/Sensores.tsx"],"version":"5.9.3"}

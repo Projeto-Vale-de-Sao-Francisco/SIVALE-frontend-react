@@ -1,0 +1,42 @@
+/* ---------- Card do talhão (detalhes) ---------- */
+.card-talhao h3 { display: flex; align-items: center; gap: 8px; }
+.card-talhao .estrela { min-height: 0; width: 26px; height: 26px; padding: 0; border-radius: 8px; background: #fff; color: #cfd4d1; border: 1px solid var(--borda); font-size: 14px; line-height: 1; }
+.card-talhao .estrela.on { color: #f5a524; }
+.card-talhao .estrela:hover { background: var(--fundo); }
+.card-talhao .id { padding-bottom: 12px; border-bottom: 1px solid var(--borda); }
+.card-talhao .duas { margin-top: 12px; }
+.card-talhao .duas b { font-size: 15px; }
+.recolhivel { border: 1px solid var(--borda); border-radius: 14px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.recolhivel .cab { width: 100%; display: flex; justify-content: space-between; align-items: center; background: #fff; color: var(--texto); border-radius: 0; padding: 0 14px; font-size: 14px; min-height: 48px; }
+.recolhivel .cab:hover { background: var(--fundo); }
+.recolhivel .cab span { color: var(--texto-suave); transition: transform 0.15s; }
+.recolhivel .corpo { padding: 0 12px 12px; }
+.recolhivel .leitura { margin: 0; padding: 4px 14px; }
+.insight b { font-size: 14px; }
+
+/* ---------- Controles, minimapa, escala ---------- */
+.controles-mapa { position: absolute; z-index: 550; right: 12px; bottom: 28px; display: flex; flex-direction: column; gap: 8px; }
+.controles-mapa .par { display: flex; flex-direction: column; background: #2b2f2d; border-radius: 12px; overflow: hidden; }
+.controles-mapa button {
+  width: 44px; min-height: 44px; padding: 0; border-radius: 12px; background: #2b2f2d; color: #fff; font-size: 18px; font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+.controles-mapa .par button { border-radius: 0; box-shadow: none; font-size: 22px; }
+.controles-mapa button:hover { background: #3b403d; }
+.controles-mapa > button:last-child { font-size: 11px; letter-spacing: 0.3px; }
+
+.minimapa {
+  position: absolute; z-index: 550; left: calc(var(--painel-larg) + 24px); bottom: 24px; width: 190px; height: 128px;
+  border: 4px solid #2b2f2d; border-radius: 16px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+.mapa-tela .leaflet-bottom.leaflet-left { left: calc(var(--painel-larg) + 230px); bottom: 24px; }
+.mapa-tela .leaflet-control-scale-line {
+  background: rgba(0,0,0,0.45); color: #fff; border-color: #fff; font-weight: 600; border-radius: 0 0 4px 4px; text-shadow: none;
+}
+.legenda { bottom: 164px; }
+
+@media (max-width: 860px) {
+  .minimapa { display: none; }
+  .controles-mapa { bottom: auto; top: 68px; }
+  .mapa-tela .leaflet-bottom.leaflet-left { left: 8px; bottom: calc(38% + 8px); }
+}
