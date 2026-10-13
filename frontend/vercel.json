@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://chico-talhao-backend.onrender.com/:path*"
+    }
+  ]
+}
