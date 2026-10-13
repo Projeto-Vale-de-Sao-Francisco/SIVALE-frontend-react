@@ -58,7 +58,7 @@ export const api = {
   culturas: async () => lista(await request("/culturas")).map(normalizarCultura),
   criarCultura: (d: any) => request("/culturas", { method: "POST", body: corpo({ nome: d.nome, variedade: d.variedade, temperatura_min: d.temperaturaMin, temperatura_max: d.temperaturaMax, umidade_min: d.umidadeMin, umidade_max: d.umidadeMax, ciclo_medio_dias: d.cicloMedioDias, descricao: d.descricao }) }),
   talhoes: async (p = {}) => lista(await request(`/lotes${qs(renomearConsulta(p))}`)).map(normalizarTalhao),
-  criarTalhao: (d: any) => request("/lotes", { method: "POST", body: corpo({ nome: d.nome, propriedade_id: d.propriedadeId, cultura_id: d.culturaId, area: d.area, data_plantio: d.dataPlantio, previsao_colheita: d.previsaoColheita, situacao: d.status ?? d.situacao }) }),
+  criarTalhao: (d: any) => request("/lotes", { method: "POST", body: corpo({ nome: d.nome, propriedade_id: d.propriedadeId, cultura_id: d.culturaId, area: d.area, poligono: d.poligono, data_plantio: d.dataPlantio, previsao_colheita: d.previsaoColheita, situacao: d.status ?? d.situacao }) }),
   dispositivos: async (p = {}) => lista(await request(`/devices${qs(renomearConsulta(p))}`)).map(normalizarDispositivo),
   criarDispositivo: (d: any) => request("/devices", { method: "POST", body: corpo({ talhaoId: d.talhaoId, propriedadeId: d.propriedadeId, codigo: d.codigo, modelo: d.modelo, tipoSensor: d.tipoSensor ?? d.tipo, unidadeMedida: d.unidadeMedida, status: d.status }) }),
   atualizarDispositivo: (id: number, d: any) => request(`/devices/${id}/status`, { method: "PATCH", body: corpo({ status: d.status }) }),

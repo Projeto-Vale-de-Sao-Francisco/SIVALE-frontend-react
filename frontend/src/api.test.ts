@@ -41,6 +41,16 @@ describe("cliente HTTP", () => {
     expect(lotes[0]).toMatchObject({ id: 3, propriedadeId: 2, culturaId: 4, cultura: { id: 4, nome: "Uva" }, dataPlantio: "2026-01-01", previsaoColheita: "2026-05-01" });
   });
 
+  it("envia a marcação geográfica ao cadastrar o talhão", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ id: 3 }));
+    const poligono = [[-9.39, -40.5], [-9.39, -40.49], [-9.4, -40.49]];
+
+    await api.criarTalhao({ nome: "Lote Norte", propriedadeId: 2, culturaId: 4, area: 3, poligono, dataPlantio: "2026-10-01", status: "ativo" });
+
+    const options = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(options.body))).toMatchObject({ poligono });
+  });
+
   it("deriva propriedades das relações dos lotes", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       Response.json([

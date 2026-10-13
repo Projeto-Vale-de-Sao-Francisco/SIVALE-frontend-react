@@ -174,7 +174,10 @@ export default function Dashboard() {
       const lng = l.longitude ?? com?.longitude ?? (propriedade?.longitude ?? -40.5);
       const pend = alertas.filter((a) => a.talhaoId === l.id);
       const risco = pend.some((a) => a.nivel === "CRITICO") ? "critico" : pend.length ? "atencao" : "bom";
-      return { ...l, sensores: sens, poligono: quadradoDaArea(lat, lng, l.area), risco, alertas: pend };
+      const poligonoSalvo = Array.isArray(l.poligono)
+        ? l.poligono.filter((ponto: unknown) => Array.isArray(ponto) && ponto.length === 2 && ponto.every((valor) => typeof valor === "number" && Number.isFinite(valor)))
+        : [];
+      return { ...l, sensores: sens, poligono: poligonoSalvo.length >= 3 ? poligonoSalvo : quadradoDaArea(lat, lng, l.area), risco, alertas: pend };
     });
   }, [lotes, sensores, alertas, propId, propriedade]);
 

@@ -49,6 +49,7 @@ export default function Talhoes() {
         culturaId: novo.culturaId ? Number(novo.culturaId) : undefined,
         nome: novo.nome,
         area: num(novo.area),
+        poligono: pontos,
         dataPlantio: novo.dataPlantio || undefined,
         previsaoColheita: novo.previsaoColheita || undefined,
         status: "ativo",
