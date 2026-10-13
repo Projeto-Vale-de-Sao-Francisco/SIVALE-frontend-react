@@ -8,7 +8,7 @@ export default function Mercado() {
   const [dados, setDados] = useState<any[]>([]);
   const [culturas, setCulturas] = useState<any[]>([]);
   const hoje = () => new Date().toISOString().slice(0, 10);
-  const [novo, setNovo] = useState({ culturaId: "", mercadoDestino: "", precoMedio: "", moeda: "USD", demandaEstimada: "", dataReferencia: hoje() });
+  const [novo, setNovo] = useState({ culturaId: "", mercadoDestino: "", paisDestino: "", precoMedio: "", moeda: "USD", unidadeMedida: "kg", demandaEstimada: "", dataReferencia: hoje() });
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
   const [atualizando, setAtualizando] = useState(false);
@@ -29,12 +29,14 @@ export default function Mercado() {
       await api.criarValorMercado({
         culturaId: Number(novo.culturaId),
         mercadoDestino: novo.mercadoDestino,
+        paisDestino: novo.paisDestino,
         precoMedio: Number(novo.precoMedio),
         moeda: novo.moeda,
+        unidadeMedida: novo.unidadeMedida,
         dataReferencia: novo.dataReferencia,
-        demandaEstimada: novo.demandaEstimada || undefined,
+        demandaEstimada: novo.demandaEstimada ? Number(novo.demandaEstimada) : undefined,
       });
-      setNovo({ ...novo, mercadoDestino: "", precoMedio: "", demandaEstimada: "" });
+      setNovo({ ...novo, mercadoDestino: "", paisDestino: "", precoMedio: "", demandaEstimada: "" });
       carregar();
     } catch (err: any) {
       setErro(err.message);
@@ -46,7 +48,8 @@ export default function Mercado() {
     setAviso("");
     setAtualizando(true);
     try {
-      const r = await api.atualizarMercado();
+      if (!novo.culturaId) throw new Error("Selecione uma cultura para importar os dados.");
+      const r = await api.atualizarMercado(Number(novo.culturaId));
       setAviso(`${r.inseridos} valores novos e ${r.atualizados} atualizados${r.ignorados ? ` (${r.ignorados} ignorados: cultura ou dados inválidos)` : ""}.`);
       carregar();
     } catch (err: any) {
@@ -63,7 +66,7 @@ export default function Mercado() {
   return (
     <div>
       <Cabecalho titulo="Dados de Mercado" subtitulo="Preços e demanda por cultura e destino de exportação.">
-        {podeGerir && <button onClick={atualizar} disabled={atualizando}>{atualizando ? "Atualizando..." : "Atualizar valores"}</button>}
+        {podeGerir && <button onClick={atualizar} disabled={atualizando || !novo.culturaId}>{atualizando ? "Importando..." : "Importar dados da cultura"}</button>}
       </Cabecalho>
       {aviso && <div className="aviso">{aviso}</div>}
       {!podeGerir && erro && <div className="erro">{erro}</div>}
@@ -76,6 +79,7 @@ export default function Mercado() {
             </select>
           </label>
           <label>Mercado destino <input value={novo.mercadoDestino} onChange={(e) => setNovo({ ...novo, mercadoDestino: e.target.value })} placeholder="União Europeia" required /></label>
+          <label>País de destino <input value={novo.paisDestino} onChange={(e) => setNovo({ ...novo, paisDestino: e.target.value })} placeholder="Países Baixos" required /></label>
           <label>Preço médio <input type="number" step="0.01" value={novo.precoMedio} onChange={(e) => setNovo({ ...novo, precoMedio: e.target.value })} required /></label>
           <label>Moeda
             <select value={novo.moeda} onChange={(e) => setNovo({ ...novo, moeda: e.target.value })}>
@@ -84,14 +88,14 @@ export default function Mercado() {
               <option value="EUR">EUR</option>
             </select>
           </label>
-          <label>Demanda
-            <select value={novo.demandaEstimada} onChange={(e) => setNovo({ ...novo, demandaEstimada: e.target.value })}>
-              <option value="">—</option>
-              <option value="baixa">baixa</option>
-              <option value="média">média</option>
-              <option value="alta">alta</option>
+          <label>Unidade de medida
+            <select value={novo.unidadeMedida} onChange={(e) => setNovo({ ...novo, unidadeMedida: e.target.value })}>
+              <option value="kg">kg</option>
+              <option value="tonelada">tonelada</option>
+              <option value="caixa">caixa</option>
             </select>
           </label>
+          <label>Demanda estimada <input type="number" min="0" step="any" value={novo.demandaEstimada} onChange={(e) => setNovo({ ...novo, demandaEstimada: e.target.value })} placeholder="Quantidade" /></label>
           <label>Data de referência <input type="date" value={novo.dataReferencia} onChange={(e) => setNovo({ ...novo, dataReferencia: e.target.value })} required /></label>
           <button type="submit">Registrar</button>
         </form>
@@ -99,14 +103,15 @@ export default function Mercado() {
 
       <div className="painel">
         <table>
-          <thead><tr><th>Cultura</th><th>Mercado destino</th><th>Preço médio</th><th>Demanda</th><th>Referência</th></tr></thead>
+          <thead><tr><th>Cultura</th><th>Mercado destino</th><th>País</th><th>Preço médio</th><th>Demanda</th><th>Referência</th></tr></thead>
           <tbody>
             {dados.map((d) => (
               <tr key={d.id}>
                 <td>{d.cultura?.nome ?? nomeCultura(d.culturaId)}</td>
                 <td>{d.mercadoDestino}</td>
-                <td>{d.moeda} {d.precoMedio}</td>
-                <td>{d.demandaEstimada ?? "—"}</td>
+                <td>{d.paisDestino}</td>
+                <td>{d.moeda} {d.precoMedio} / {d.unidadeMedida}</td>
+                <td>{d.demandaEstimada?.toLocaleString("pt-BR") ?? "—"}</td>
                 <td>{new Date(d.dataReferencia).toLocaleDateString("pt-BR")}</td>
               </tr>
             ))}

@@ -82,4 +82,37 @@ describe("cliente HTTP", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("indisponível", { status: 503 }));
     await expect(api.me()).rejects.toThrow("Erro na requisição.");
   });
+
+  it("envia operação logística com status inicial aceito pelo backend", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ id: 1 }));
+
+    await api.criarLogistica({ empresaId: 2, colheitaId: 3, origem: "Petrolina", destino: "Rotterdam", modal: "maritimo" });
+
+    const options = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(options.body))).toMatchObject({ empresa_id: 2, colheita_id: 3, status: "planejada" });
+  });
+
+  it("envia todos os campos obrigatórios ao cadastrar valor de mercado", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ id: 1 }));
+
+    await api.criarValorMercado({ culturaId: 4, mercadoDestino: "União Europeia", paisDestino: "Países Baixos", precoMedio: 12.5, moeda: "EUR", unidadeMedida: "kg", demandaEstimada: 1200, dataReferencia: "2026-10-13" });
+
+    const options = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(options.body))).toEqual({ cultura_id: 4, data_referencia: "2026-10-13", mercado_destino: "União Europeia", pais_destino: "Países Baixos", preco: 12.5, moeda: "EUR", unidade_medida: "kg", demanda_estimada: 1200 });
+  });
+
+  it("informa a cultura selecionada ao importar dados de mercado", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ inseridos: 1, atualizados: 0 }));
+
+    await api.atualizarMercado(7);
+
+    const options = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(options.body))).toEqual({ cultura_id: 7 });
+  });
+
+  it("normaliza o nome do talhão aninhado na operação logística", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ data: [{ id: 9, colheita_id: 3, status: "planejada", colheita: { talhao_cultura: { talhao: { nome: "Talhão Norte" } } } }] }));
+
+    await expect(api.logistica()).resolves.toMatchObject([{ id: 9, colheitaId: 3, talhaoNome: "Talhão Norte", situacao: "planejada" }]);
+  });
 });
