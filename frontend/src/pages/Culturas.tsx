@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import NovoRegistro from "../NovoRegistro";
+import Cabecalho from "../Cabecalho";
 import { api } from "../api";
+import { ehAdmin } from "../perfil";
 
 const vazio = { nome: "", variedade: "", temperaturaMin: "", temperaturaMax: "", umidadeMin: "", umidadeMax: "", cicloMedioDias: "" };
 
@@ -29,8 +32,9 @@ export default function Culturas() {
 
   return (
     <div>
-      <h2>Culturas</h2>
-      <div className="painel">
+      <Cabecalho titulo="Culturas" subtitulo="Faixas ideais de temperatura e umidade usadas para gerar os alertas." />
+      {ehAdmin() && (
+      <NovoRegistro rotulo="Nova cultura">
         <form className="linha" onSubmit={criar}>
           <label>Nome <input value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} placeholder="Manga" required /></label>
           <label>Variedade <input value={novo.variedade} onChange={(e) => setNovo({ ...novo, variedade: e.target.value })} placeholder="Tommy Atkins" /></label>
@@ -41,7 +45,8 @@ export default function Culturas() {
           <label>Ciclo (dias) <input type="number" value={novo.cicloMedioDias} onChange={(e) => setNovo({ ...novo, cicloMedioDias: e.target.value })} /></label>
           <button type="submit">Cadastrar cultura</button>
         </form>
-      </div>
+      </NovoRegistro>
+      )}
 
       <div className="painel">
         <table>

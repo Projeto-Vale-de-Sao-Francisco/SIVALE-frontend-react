@@ -1,74 +1,80 @@
 import { useEffect, useState } from "react";
+import NovoRegistro from "../NovoRegistro";
+import Cabecalho from "../Cabecalho";
 import { api } from "../api";
+import { ehAdmin } from "../perfil";
 
 export default function Logistica() {
   const [operacoes, setOperacoes] = useState<any[]>([]);
-  const [empresas, setEmpresas] = useState<any[]>([]);
-  const [lotes, setLotes] = useState<any[]>([]);
-  const [novo, setNovo] = useState({ empresaId: "", loteId: "", origem: "", destino: "", modal: "marítimo" });
+  const [novo, setNovo] = useState({ empresaId: "", colheitaId: "", origem: "", destino: "", modal: "MARITIMO", transportadora: "", dataPrevista: "", tempoEstimadoHoras: "", custoEstimado: "" });
+  const [erro, setErro] = useState("");
+  const podeGerir = ehAdmin();
 
   async function carregar() {
-    const [op, e, l] = await Promise.all([api.logistica(), api.empresas(), api.lotes()]);
-    setOperacoes(op);
-    setEmpresas(e);
-    setLotes(l);
-    if (!novo.empresaId && e[0]) setNovo((n) => ({ ...n, empresaId: String(e[0].id) }));
+    setOperacoes(await api.logistica());
   }
   useEffect(() => { carregar(); }, []);
 
   async function criar(e: React.FormEvent) {
     e.preventDefault();
-    await api.criarLogistica({
-      empresaId: Number(novo.empresaId),
-      loteId: novo.loteId ? Number(novo.loteId) : undefined,
-      origem: novo.origem,
-      destino: novo.destino,
-      modal: novo.modal,
-    });
-    setNovo({ ...novo, origem: "", destino: "" });
-    carregar();
-  }
-
-  function nomeLote(id: number | null) {
-    if (!id) return "—";
-    return lotes.find((l) => l.id === id)?.nome ?? id;
+    setErro("");
+    try {
+      await api.criarLogistica({
+        empresaId: Number(novo.empresaId),
+        colheitaId: Number(novo.colheitaId),
+        origem: novo.origem,
+        destino: novo.destino,
+        modal: novo.modal,
+        transportadora: novo.transportadora || undefined,
+        dataPrevista: novo.dataPrevista || undefined,
+        tempoEstimadoHoras: novo.tempoEstimadoHoras ? Number(novo.tempoEstimadoHoras) : undefined,
+        custoEstimado: novo.custoEstimado ? Number(novo.custoEstimado) : undefined,
+      });
+      setNovo({ ...novo, origem: "", destino: "", transportadora: "", dataPrevista: "", tempoEstimadoHoras: "", custoEstimado: "" });
+      carregar();
+    } catch (err: any) {
+      setErro(err.message);
+    }
   }
 
   return (
     <div>
-      <h2>Logística e Exportação</h2>
-      <div className="painel">
+      <Cabecalho titulo="Logística e Exportação" subtitulo="Operações de transporte e exportação da produção." />
+      {podeGerir && <NovoRegistro rotulo="Nova operação">
+        {erro && <div className="erro">{erro}</div>}
         <form className="linha" onSubmit={criar}>
-          <label>Lote (opcional)
-            <select value={novo.loteId} onChange={(e) => setNovo({ ...novo, loteId: e.target.value })}>
-              <option value="">—</option>
-              {lotes.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
-            </select>
-          </label>
+          <label>ID da empresa <input type="number" min="1" value={novo.empresaId} onChange={(e) => setNovo({ ...novo, empresaId: e.target.value })} required /></label>
+          <label>ID da colheita <input type="number" min="1" value={novo.colheitaId} onChange={(e) => setNovo({ ...novo, colheitaId: e.target.value })} required /></label>
           <label>Origem <input value={novo.origem} onChange={(e) => setNovo({ ...novo, origem: e.target.value })} placeholder="Petrolina/PE" required /></label>
           <label>Destino <input value={novo.destino} onChange={(e) => setNovo({ ...novo, destino: e.target.value })} placeholder="Rotterdam" required /></label>
           <label>Modal
             <select value={novo.modal} onChange={(e) => setNovo({ ...novo, modal: e.target.value })}>
-              <option value="marítimo">marítimo</option>
-              <option value="aéreo">aéreo</option>
-              <option value="rodoviário">rodoviário</option>
+              <option value="MARITIMO">marítimo</option>
+              <option value="AEREO">aéreo</option>
+              <option value="RODOVIARIO">rodoviário</option>
             </select>
           </label>
+          <label>Transportadora <input value={novo.transportadora} onChange={(e) => setNovo({ ...novo, transportadora: e.target.value })} /></label>
+          <label>Data prevista <input type="date" value={novo.dataPrevista} onChange={(e) => setNovo({ ...novo, dataPrevista: e.target.value })} /></label>
+          <label>Tempo estimado (h) <input type="number" min="0" value={novo.tempoEstimadoHoras} onChange={(e) => setNovo({ ...novo, tempoEstimadoHoras: e.target.value })} /></label>
+          <label>Custo (R$) <input type="number" step="any" value={novo.custoEstimado} onChange={(e) => setNovo({ ...novo, custoEstimado: e.target.value })} /></label>
           <button type="submit">Registrar operação</button>
         </form>
-      </div>
+      </NovoRegistro>}
 
       <div className="painel">
         <table>
-          <thead><tr><th>Lote</th><th>Origem</th><th>Destino</th><th>Modal</th><th>Situação</th></tr></thead>
+          <thead><tr><th>Colheita</th><th>Origem</th><th>Destino</th><th>Modal</th><th>Transportadora</th><th>Custo</th><th>Situação</th></tr></thead>
           <tbody>
             {operacoes.map((o) => (
               <tr key={o.id}>
-                <td>{nomeLote(o.loteId)}</td>
+                <td>{o.colheita?.talhaoCultura?.talhao?.nome ?? `#${o.colheitaId}`}</td>
                 <td>{o.origem}</td>
                 <td>{o.destino}</td>
                 <td>{o.modal}</td>
-                <td><span className="badge ativo">{o.situacao}</span></td>
+                <td>{o.transportadora ?? "—"}</td>
+                <td>{o.custoEstimado != null ? `R$ ${o.custoEstimado.toLocaleString("pt-BR")}` : "—"}</td>
+                <td><span className="badge ativo">{String(o.situacao).toLowerCase()}</span></td>
               </tr>
             ))}
           </tbody>

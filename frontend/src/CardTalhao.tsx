@@ -29,7 +29,7 @@ function Recolhivel({ titulo, aberto = false, children }: { titulo: string; aber
 
 export default function CardTalhao({ t, cultura, historico, ultima, onFechar }: any) {
   const [fav, alternarFav] = useFavorito(t.id);
-  const leituras = historico.filter((h: any) => h.loteId === t.id).slice(-24);
+  const leituras = historico.filter((h: any) => h.talhaoId === t.id).slice(-24);
   const saude = percentualNaFaixa(leituras, cultura);
   const recentes = t.sensores.map((s: any) => ultima[s.id]).filter(Boolean);
   const atual = recentes.sort((a: any, b: any) => (a.dataHora < b.dataHora ? 1 : -1))[0];

@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Polygon, Rectangle, CircleMarker, Tooltip, Sca
 import type { Map as LMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { api } from "../api";
+import { ehAdmin } from "../perfil";
 import Icon from "../Icon";
 import CondicaoClimatica from "../CondicaoClimatica";
 import CardTalhao from "../CardTalhao";
@@ -90,6 +91,15 @@ export default function Dashboard() {
       { enableHighAccuracy: true, timeout: 8000 }
     );
   }
+  // O menu pode recolher/expandir: o mapa precisa recalcular o tamanho.
+  useEffect(() => {
+    const el = telaRef.current;
+    if (!mapa || !el) return;
+    const ro = new ResizeObserver(() => mapa.invalidateSize());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [mapa]);
+
   function telaCheia() {
     if (document.fullscreenElement) document.exitFullscreen();
     else telaRef.current?.requestFullscreen?.();
@@ -99,10 +109,10 @@ export default function Dashboard() {
     try {
       const [p, l, s, c, a] = await Promise.all([
         api.propriedades(),
-        api.lotes(),
-        api.sensores(),
+        api.talhoes(),
+        api.dispositivos(),
         api.culturas(),
-        api.alertas({ visualizado: "false" }),
+        api.alertas({ resolvido: "false" }),
       ]);
       setPropriedades(p);
       setLotes(l);
@@ -111,7 +121,7 @@ export default function Dashboard() {
       setAlertas(a);
       setPropId((atual) => atual ?? p[0]?.id ?? null);
       const ultimas = await Promise.all(
-        s.map((x: any) => api.leituras({ sensorId: String(x.id), limite: "1" }).then((r: any[]) => [x.id, r[0]]))
+        s.map((x: any) => api.medicoes({ dispositivoId: String(x.id), limite: "1" }).then((r: any) => [x.id, r.dados[0]]))
       );
       setUltimaPorSensor(Object.fromEntries(ultimas));
       setErro("");
@@ -139,12 +149,12 @@ export default function Dashboard() {
   const talhoes = useMemo(() => {
     const doProp = lotes.filter((l) => l.propriedadeId === propId);
     return doProp.map((l, idx) => {
-      const sens = sensores.filter((s) => s.loteId === l.id);
+      const sens = sensores.filter((s) => s.talhaoId === l.id);
       const com = sens.find((s) => s.latitude != null && s.longitude != null);
-      const lat = com?.latitude ?? (propriedade?.latitude ?? -9.4) + idx * 0.004;
-      const lng = com?.longitude ?? (propriedade?.longitude ?? -40.5);
-      const pend = alertas.filter((a) => a.loteId === l.id);
-      const risco = pend.some((a) => a.nivel === "critico") ? "critico" : pend.length ? "atencao" : "bom";
+      const lat = l.latitude ?? com?.latitude ?? (propriedade?.latitude ?? -9.4) + idx * 0.004;
+      const lng = l.longitude ?? com?.longitude ?? (propriedade?.longitude ?? -40.5);
+      const pend = alertas.filter((a) => a.talhaoId === l.id);
+      const risco = pend.some((a) => a.nivel === "CRITICO") ? "critico" : pend.length ? "atencao" : "bom";
       return { ...l, sensores: sens, poligono: quadradoDaArea(lat, lng, l.area), risco, alertas: pend };
     });
   }, [lotes, sensores, alertas, propId, propriedade]);
@@ -155,11 +165,11 @@ export default function Dashboard() {
   const temps = historico.map((h) => h.temperatura);
   const umids = historico.map((h) => h.umidade);
   const est = { t: estatistica(temps), u: estatistica(umids) };
-  const sensoresAtivos = sensores.filter((s) => talhoes.some((t) => t.id === s.loteId) && s.status === "ativo").length;
+  const sensoresAtivos = sensores.filter((s) => talhoes.some((t) => t.id === s.talhaoId) && s.status === "ATIVO").length;
 
   const conforto = useMemo(() => {
     const pcts = talhoes
-      .map((t) => percentualNaFaixa(historico.filter((h) => h.loteId === t.id).slice(-24), culturaDe(t.culturaId)))
+      .map((t) => percentualNaFaixa(historico.filter((h) => h.talhaoId === t.id).slice(-24), culturaDe(t.culturaId)))
       .filter((v): v is number => v != null);
     return pcts.length ? Math.round(pcts.reduce((s, v) => s + v, 0) / pcts.length) : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -177,7 +187,7 @@ export default function Dashboard() {
   }
 
   function exportarCsv() {
-    const linhas = ["dataHora,loteId,temperatura,umidade", ...historico.map((h) => `${h.dataHora},${h.loteId},${h.temperatura},${h.umidade}`)];
+    const linhas = ["dataHora,talhaoId,temperatura,umidade", ...historico.map((h) => `${h.dataHora},${h.talhaoId},${h.temperatura},${h.umidade}`)];
     const url = URL.createObjectURL(new Blob([linhas.join("\n")], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;
@@ -227,7 +237,7 @@ export default function Dashboard() {
                 key={s.id}
                 center={[s.latitude, s.longitude]}
                 radius={7}
-                pathOptions={{ color: "#fff", weight: 2, fillColor: s.status === "ativo" ? "#16a34a" : "#9ca3af", fillOpacity: 1 }}
+                pathOptions={{ color: "#fff", weight: 2, fillColor: s.status === "ATIVO" ? "#16a34a" : "#9ca3af", fillOpacity: 1 }}
                 eventHandlers={{ click: () => setLoteSel(t.id) }}
               >
                 <Tooltip>{s.codigo}</Tooltip>
@@ -265,9 +275,11 @@ export default function Dashboard() {
             ))}
           </select>
         </label>
-        <button className="laranja" onClick={() => navigate("/lotes")}>
-          + <span className="txt-btn">Novo lote</span>
+        {ehAdmin() && (
+          <button onClick={() => navigate("/talhoes")}>
+          + <span className="txt-btn">Novo talhão</span>
         </button>
+        )}
         <button className="secundario" onClick={exportarCsv} aria-label="Exportar CSV">
           <Icon nome="exportar" tamanho={18} /> <span className="txt-btn">Exportar</span>
         </button>
@@ -319,14 +331,14 @@ export default function Dashboard() {
               <div className="mm"><span>Máx <b>{fmt(est.t.max, 0)}°</b></span><span>Mín <b>{fmt(est.t.min, 0)}°</b></span></div>
             </div>
             <div className="metrica">
-              <div className="rot">Sensores ativos</div>
+              <div className="rot">Dispositivos ativos</div>
               <div className="val">{sensoresAtivos}</div>
-              <div className="mm"><span>de <b>{sensores.filter((s) => talhoes.some((t) => t.id === s.loteId)).length}</b></span></div>
+              <div className="mm"><span>de <b>{sensores.filter((s) => talhoes.some((t) => t.id === s.talhaoId)).length}</b></span></div>
             </div>
             <div className="metrica">
               <div className="rot">Leituras registradas</div>
               <div className="val">{historico.length}</div>
-              <div className="mm"><span>{alertas.filter((a) => talhoes.some((t) => t.id === a.loteId)).length} alertas pendentes</span></div>
+              <div className="mm"><span>{alertas.filter((a) => talhoes.some((t) => t.id === a.talhaoId)).length} alertas pendentes</span></div>
             </div>
           </div>
         </section>
@@ -367,13 +379,13 @@ export default function Dashboard() {
         <section className="pl-cartao">
           <h3>Alertas pendentes</h3>
           <div className="lista-alertas">
-            {alertas.filter((a) => talhoes.some((t) => t.id === a.loteId)).length === 0 && <p className="vazio">Nenhum alerta pendente.</p>}
+            {alertas.filter((a) => talhoes.some((t) => t.id === a.talhaoId)).length === 0 && <p className="vazio">Nenhum alerta pendente.</p>}
             {alertas
-              .filter((a) => talhoes.some((t) => t.id === a.loteId))
+              .filter((a) => talhoes.some((t) => t.id === a.talhaoId))
               .slice(0, 5)
               .map((a) => (
                 <div className="item" key={a.id}>
-                  <span className={`badge ${a.nivel}`}>{a.nivel}</span>
+                  <span className={`badge ${a.nivel.toLowerCase()}`}>{a.nivel.toLowerCase()}</span>
                   <div>
                     {a.descricao}
                     <small>{new Date(a.dataHora).toLocaleString("pt-BR")}</small>
