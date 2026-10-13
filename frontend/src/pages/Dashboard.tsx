@@ -9,6 +9,7 @@ import Icon from "../Icon";
 import CondicaoClimatica from "../CondicaoClimatica";
 import CardTalhao from "../CardTalhao";
 import { estatistica, fmt, percentualNaFaixa, quadradoDaArea } from "../geo";
+import { gerarLeiturasEspMock } from "../espMock";
 
 const COR_RISCO: Record<string, string> = { bom: "#22c55e", atencao: "#f97316", critico: "#dc2626" };
 const ROTULO_RISCO: Record<string, string> = { bom: "Boas condições", atencao: "Atenção", critico: "Crítico" };
@@ -79,6 +80,7 @@ export default function Dashboard() {
   const [mapa, setMapa] = useState<LMap | null>(null);
   const [camada, setCamada] = useState<"sat" | "mapa">("sat");
   const [minhaPos, setMinhaPos] = useState<[number, number] | null>(null);
+  const [dadosSimulados, setDadosSimulados] = useState(false);
 
   function localizar() {
     navigator.geolocation?.getCurrentPosition(
@@ -112,7 +114,7 @@ export default function Dashboard() {
         api.talhoes(),
         api.dispositivos(),
         api.culturas(),
-        api.alertas({ resolvido: "false" }),
+        api.alertas({ resolvido: "false" }).catch(() => []),
       ]);
       setPropriedades(p);
       setLotes(l);
@@ -120,10 +122,18 @@ export default function Dashboard() {
       setCulturas(c);
       setAlertas(a);
       setPropId((atual) => atual ?? p[0]?.id ?? null);
-      const ultimas = await Promise.all(
-        s.map((x: any) => api.medicoes({ dispositivoId: String(x.id), limite: "1" }).then((r: any) => [x.id, r.dados[0]]))
-      );
+      const mock = gerarLeiturasEspMock(s, Date.now(), 1);
+      let usouMock = false;
+      const ultimas = await Promise.all(s.map(async (x: any) => {
+        try {
+          const r = await api.medicoes({ dispositivoId: String(x.id), limite: "1" });
+          if (r.dados[0]) return [x.id, r.dados[0]];
+        } catch { /* usa o ESP simulado abaixo */ }
+        usouMock = true;
+        return [x.id, mock.find((m) => m.dispositivoId === x.id)];
+      }));
       setUltimaPorSensor(Object.fromEntries(ultimas));
+      setDadosSimulados(usouMock);
       setErro("");
     } catch (e: any) {
       setErro(e.message || "Falha ao carregar dados.");
@@ -140,8 +150,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (propId == null) return;
-    api.dashboardHistorico({ propriedadeId: String(propId) }).then(setHistorico).catch(() => setHistorico([]));
-  }, [propId, ultimaPorSensor]);
+    const idsTalhoes = new Set(lotes.filter((l) => l.propriedadeId === propId).map((l) => l.id));
+    const dispositivosDaPropriedade = sensores.filter((s) => idsTalhoes.has(s.talhaoId));
+    api.dashboardHistorico({ propriedadeId: String(propId) }).then((dados) => {
+      if (dados.length) { setHistorico(dados); return; }
+      setHistorico(gerarLeiturasEspMock(dispositivosDaPropriedade));
+      setDadosSimulados(true);
+    }).catch(() => {
+      setHistorico(gerarLeiturasEspMock(dispositivosDaPropriedade));
+      setDadosSimulados(true);
+    });
+  }, [propId, ultimaPorSensor, lotes, sensores]);
 
   const propriedade = propriedades.find((p) => p.id === propId);
   const culturaDe = (id: number) => culturas.find((c) => c.id === id);
@@ -338,7 +357,7 @@ export default function Dashboard() {
             <div className="metrica">
               <div className="rot">Leituras registradas</div>
               <div className="val">{historico.length}</div>
-              <div className="mm"><span>{alertas.filter((a) => talhoes.some((t) => t.id === a.talhaoId)).length} alertas pendentes</span></div>
+              <div className="mm"><span>{dadosSimulados ? "ESP simulado" : `${alertas.filter((a) => talhoes.some((t) => t.id === a.talhaoId)).length} alertas pendentes`}</span></div>
             </div>
           </div>
         </section>

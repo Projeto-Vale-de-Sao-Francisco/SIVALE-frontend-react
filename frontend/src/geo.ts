@@ -1,5 +1,20 @@
 export type Ponto = [number, number];
 
+export function calcularAreaHa(pontos: Ponto[]): number {
+  if (pontos.length < 3) return 0;
+  const raio = 6_371_008.8;
+  const latMedia = (pontos.reduce((s, [lat]) => s + lat, 0) / pontos.length) * Math.PI / 180;
+  const xy = pontos.map(([lat, lng]) => [
+    raio * lng * Math.PI / 180 * Math.cos(latMedia),
+    raio * lat * Math.PI / 180,
+  ]);
+  const dobroDaArea = xy.reduce((soma, [x1, y1], i) => {
+    const [x2, y2] = xy[(i + 1) % xy.length];
+    return soma + x1 * y2 - x2 * y1;
+  }, 0);
+  return Math.abs(dobroDaArea) / 2 / 10_000;
+}
+
 // O banco guarda so lat/long do sensor e da propriedade, entao o talhao e desenhado
 // como um quadrado com a area do lote (ha), centrado no sensor.
 export function quadradoDaArea(lat: number, lng: number, areaHa: number | null | undefined): Ponto[] {

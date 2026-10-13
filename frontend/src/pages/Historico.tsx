@@ -3,6 +3,7 @@ import Cabecalho from "../Cabecalho";
 import { CartesianGrid, Legend, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../api";
 import { estatistica, fmt } from "../geo";
+import { gerarLeiturasEspMock } from "../espMock";
 
 const CORES = {
   temp: ["#ea580c", "#c2410c", "#f59e0b", "#b45309", "#9a3412", "#fb923c"],
@@ -29,6 +30,7 @@ export default function Historico() {
   const [pontos, setPontos] = useState<any[]>([]);
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
+  const [dadosSimulados, setDadosSimulados] = useState(false);
   const [f, setF] = useState({ propriedadeId: "", talhaoId: "", culturaId: "", dispositivoId: "", inicio: dataLocal(Date.now() - 7 * 86_400_000), fim: dataLocal(Date.now()) });
 
   useEffect(() => {
@@ -48,10 +50,19 @@ export default function Historico() {
         inicio: f.inicio ? new Date(`${f.inicio}T00:00:00`).toISOString() : "",
         fim: f.fim ? new Date(`${f.fim}T23:59:59`).toISOString() : "",
       })
-      .then((r) => { setPontos(r); setErro(""); })
-      .catch((e) => setErro(e.message))
+      .then((r) => {
+        if (r.length) { setPontos(r); setDadosSimulados(false); setErro(""); return; }
+        setPontos(gerarLeiturasEspMock(dispositivosDisponiveis));
+        setDadosSimulados(true);
+        setErro("");
+      })
+      .catch(() => {
+        setPontos(gerarLeiturasEspMock(dispositivosDisponiveis));
+        setDadosSimulados(true);
+        setErro("");
+      })
       .finally(() => setCarregando(false));
-  }, [f]);
+  }, [f, dispositivos]);
 
   const talhoesDisponiveis = talhoes.filter((t) => !f.propriedadeId || String(t.propriedadeId) === f.propriedadeId);
   const dispositivosDisponiveis = dispositivos.filter((d) => {
@@ -139,6 +150,7 @@ export default function Historico() {
       </div>
 
       {erro && <div className="erro">{erro}</div>}
+      {dadosSimulados && <div className="aviso-simulado">Exibindo dados simulados do ESP para demonstração.</div>}
 
       <div className="cartoes">
         <div className="cartao"><div className="rotulo">Leituras no período</div><div className="valor">{pontos.length}</div></div>
