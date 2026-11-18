@@ -97,5 +97,5 @@ curl -X POST http://localhost:3333/ingest/medicoes \
 | Método e rota | Descrição |
 |---|---|
 | `GET /thingspeak/dados` | Último feed do canal ThingSpeak |
-| `GET /thingspeak/enviar?temperatura&umidade` | Publica no canal |
-| `GET /thingspeak/salvar?dispositivo=<codigo>` | Grava a última leitura do canal como medição do dispositivo |
+| `POST /thingspeak/enviar` com `{ "temperatura": 25, "umidade": 60 }` | Publica no canal |
+| `POST /thingspeak/salvar` | Grava a última leitura do canal como medição do sensor configurado |

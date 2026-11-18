@@ -10,6 +10,7 @@ import Logistica from "./pages/Logistica";
 import Alertas from "./pages/Alertas";
 import Historico from "./pages/Historico";
 import Usuarios from "./pages/Usuarios";
+import Auditoria from "./pages/Auditoria";
 import MeuPerfil from "./pages/MeuPerfil";
 import Cadastros from "./pages/Cadastros";
 import Icon from "./Icon";
@@ -174,7 +175,7 @@ export default function App() {
     </RotaProtegida>
   );
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={protegida(<Dashboard />)} />
@@ -187,6 +188,7 @@ export default function App() {
         <Route path="/mercado" element={protegida(<Mercado />)} />
         <Route path="/logistica" element={protegida(<Logistica />)} />
         <Route path="/usuarios" element={protegida(<Usuarios />, true)} />
+        <Route path="/auditoria" element={protegida(<Auditoria />, true)} />
         <Route path="/perfil" element={protegida(<MeuPerfil />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

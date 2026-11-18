@@ -1,33 +1,51 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { api, salvarSessao } from "./api";
+import { api, estaAutenticado, salvarSessao } from "./api";
 
 describe("cliente HTTP", () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     vi.restoreAllMocks();
   });
 
-  it("envia o token ao revogar a sessão no backend", async () => {
-    salvarSessao("token-de-teste", { id: 1, perfil: "ADMIN" });
+  it("envia o cookie HttpOnly ao revogar a sessão no backend", async () => {
+    salvarSessao({ id: 1, perfil: "ADMIN" });
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
 
     await api.logout();
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/auth/logout",
-      expect.objectContaining({ method: "POST", headers: expect.objectContaining({ Authorization: "Bearer token-de-teste" }) }),
+      expect.objectContaining({ method: "POST", credentials: "include" }),
     );
+    expect(fetchMock.mock.calls[0][1]?.headers).not.toHaveProperty("Authorization");
   });
 
-  it("adapta a resposta de login do Chico Talhão para a sessão do frontend", async () => {
+  it("usa a sessão de cookie sem receber JWT no corpo do login", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      Response.json({ accessToken: "jwt", user: { id: 7, nome: "Ana", email: "ana@example.com", tipo: "ADMIN" } }),
+      Response.json({ user: { id: 7, nome: "Ana", email: "ana@example.com", tipo: "ADMIN" } }),
     );
 
     await expect(api.login("ana@example.com", "senha-segura")).resolves.toEqual({
-      token: "jwt",
       usuario: { id: 7, nomeCompleto: "Ana", email: "ana@example.com", perfil: "ADMIN" },
     });
+  });
+
+  it("mantém somente o perfil mínimo da sessão, sem token ou e-mail no armazenamento", () => {
+    salvarSessao({
+      id: 7,
+      nomeCompleto: "Ana",
+      email: "ana@example.com",
+      perfil: "ADMIN",
+    });
+
+    expect(estaAutenticado()).toBe(true);
+    expect(JSON.parse(sessionStorage.getItem("sivale_user")!)).toEqual({
+      id: 7,
+      nomeCompleto: "Ana",
+      perfil: "ADMIN",
+    });
+    expect(localStorage.getItem("sivale_token")).toBeNull();
   });
 
   it("consulta lotes e normaliza relações aninhadas", async () => {
@@ -75,6 +93,18 @@ describe("cliente HTTP", () => {
     await api.alertas({ resolvido: "false" });
 
     expect(fetchMock.mock.calls[0][0]).toBe("/api/alerts?status=ativo");
+  });
+
+  it("consulta os logs de auditoria com filtros e paginação", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ data: [], meta: { page: 2, limit: 25, total: 0, totalPages: 0 } }),
+    );
+
+    await api.auditLogs({ usuarioId: 7, acao: "ATUALIZAR", page: 2, limit: 25 });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/audit-logs?usuarioId=7&acao=ATUALIZAR&page=2&limit=25",
+    );
   });
 
   it("combina mensagens de validação do NestJS", async () => {

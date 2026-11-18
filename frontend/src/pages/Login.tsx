@@ -15,7 +15,7 @@ export default function Login() {
     setCarregando(true);
     try {
       const resposta = await api.login(email, senha);
-      salvarSessao(resposta.token, resposta.usuario);
+      salvarSessao(resposta.usuario);
       navigate("/");
     } catch (err: any) {
       setErro(err.message || "Não foi possível entrar.");

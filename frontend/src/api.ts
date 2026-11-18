@@ -1,14 +1,25 @@
-const API_URL = (import.meta.env.VITE_API_URL || "https://chico-talhao-backend.onrender.com").replace(/\/$/, "");
+const API_URL = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
 
-function getToken() { return localStorage.getItem("sivale_token"); }
+const USER_SESSION_KEY = "sivale_user";
+
+function removerCredencialLegada() {
+  try {
+    localStorage.removeItem("sivale_token");
+    localStorage.removeItem("sivale_usuario");
+  } catch {
+    return;
+  }
+}
+
+removerCredencialLegada();
+
 function mensagemDeErro(corpo: any) {
   const mensagem = corpo?.message;
   return Array.isArray(mensagem) ? mensagem.join(" · ") : mensagem || "Erro na requisição.";
 }
 async function request(path: string, options: RequestInit = {}) {
-  const token = getToken();
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) } });
-  if (res.status === 401 && token) { limparSessao(); window.location.href = "/login"; throw new Error("Sessão expirada."); }
+  const res = await fetch(`${API_URL}${path}`, { ...options, credentials: "include", headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
+  if (res.status === 401 && path !== "/auth/login") { limparSessao(); window.location.href = "/login"; throw new Error("Sessão expirada."); }
   if (!res.ok) throw new Error(mensagemDeErro(await res.json().catch(() => null)));
   if (res.status === 204) return null;
   return res.json();
@@ -46,12 +57,13 @@ function normalizarAlerta(a: any) {
 const normalizarMercado = (m: any) => ({ ...m, culturaId: m?.cultura_id ?? m?.culturaId, dataReferencia: m?.data_referencia ?? m?.dataReferencia, mercadoDestino: m?.mercado_destino ?? m?.mercadoDestino, paisDestino: m?.pais_destino ?? m?.paisDestino, precoMedio: m?.preco ?? m?.precoMedio, unidadeMedida: m?.unidade_medida ?? m?.unidadeMedida, demandaEstimada: m?.demanda_estimada ?? m?.demandaEstimada });
 const normalizarLogistica = (o: any) => ({ ...o, empresaId: o?.empresa_id ?? o?.empresaId, colheitaId: o?.colheita_id ?? o?.colheitaId, dataPrevista: o?.data_prevista ?? o?.dataPrevista, tempoEstimadoHoras: o?.tempo_estimado_horas ?? o?.tempoEstimadoHoras, custoEstimado: o?.custo_estimado ?? o?.custoEstimado, situacao: o?.status ?? o?.situacao, talhaoNome: o?.colheita?.talhao_cultura?.talhao?.nome ?? o?.colheita?.talhaoCultura?.talhao?.nome });
 export const api = {
-  login: async (email: string, senha: string) => { const r = await request("/auth/login", { method: "POST", body: corpo({ email, senha }) }); return { token: r.accessToken, usuario: normalizarUsuario(r.user) }; },
+  login: async (email: string, senha: string) => { const r = await request("/auth/login", { method: "POST", body: corpo({ email, senha }) }); return { usuario: normalizarUsuario(r.user) }; },
   me: async () => normalizarUsuario(await request("/auth/me")),
   logout: () => request("/auth/logout", { method: "POST" }),
   dashboardResumo: (p = {}) => request(`/dashboard/resumo${qs(renomearConsulta(p))}`),
   dashboardHistorico: async (p = {}) => lista(await request(`/dashboard/historico${qs(renomearConsulta(p))}`)).map(normalizarMedicao),
   usuarios: async () => lista(await request("/users")).map(normalizarUsuario),
+  auditLogs: (p = {}) => request(`/audit-logs${qs(p)}`),
   criarUsuario: async (d: any) => normalizarUsuario(await request("/users/admin", { method: "POST", body: corpo({ nome: d.nome ?? d.nomeCompleto, cpf: d.cpf, email: d.email, telefone: d.telefone, senha: d.senha, tipo: d.tipo ?? d.perfil ?? "COMUM", vinculo: d.vinculo }) })),
   atualizarUsuario: (id: number, d: any) => d.status ? request(`/users/${id}/status`, { method: "PATCH", body: corpo({ status: d.status }) }) : request(`/users/${id}`, { method: "PATCH", body: corpo({ ...d, nome: d.nome ?? d.nomeCompleto, tipo: d.tipo ?? d.perfil }) }),
   propriedades: async () => { const lotes = lista(await request("/lotes")); const unicas = new Map<number, any>(); lotes.forEach((l: any) => { if (l.propriedade?.id) unicas.set(l.propriedade.id, l.propriedade); }); return [...unicas.values()]; },
@@ -70,7 +82,25 @@ export const api = {
   alertas: async (p = {}) => lista(await request(`/alerts${qs(renomearConsulta(p))}`)).map(normalizarAlerta), visualizarAlerta: (id: number) => request(`/alerts/${id}/view`, { method: "PATCH" }), resolverAlerta: (id: number) => request(`/alerts/${id}/resolve`, { method: "PATCH" }),
 };
 
-export function salvarSessao(token: string, usuario: any) { localStorage.setItem("sivale_token", token); localStorage.setItem("sivale_usuario", JSON.stringify(usuario)); }
-export function limparSessao() { localStorage.removeItem("sivale_token"); localStorage.removeItem("sivale_usuario"); }
-export function usuarioAtual() { const raw = localStorage.getItem("sivale_usuario"); return raw ? JSON.parse(raw) : null; }
-export function estaAutenticado() { return !!getToken(); }
+export function salvarSessao(usuario: any) {
+  const perfil = {
+    id: usuario?.id,
+    nomeCompleto: usuario?.nomeCompleto ?? usuario?.nome,
+    perfil: usuario?.perfil ?? usuario?.tipo,
+  };
+  sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify(perfil));
+}
+export function limparSessao() {
+  sessionStorage.removeItem(USER_SESSION_KEY);
+  removerCredencialLegada();
+}
+export function usuarioAtual() {
+  try {
+    const raw = sessionStorage.getItem(USER_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    limparSessao();
+    return null;
+  }
+}
+export function estaAutenticado() { return !!usuarioAtual(); }

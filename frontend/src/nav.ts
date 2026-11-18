@@ -15,6 +15,7 @@ export const CADASTROS: ItemCadastro[] = [
   { to: "/mercado", rotulo: "Mercado", icone: "mercado", grupo: "Comercial", descricao: "Preços e demanda por cultura e destino" },
   { to: "/logistica", rotulo: "Logística", icone: "logistica", grupo: "Comercial", descricao: "Operações de transporte para exportação" },
   { to: "/usuarios", rotulo: "Usuários", icone: "usuarios", grupo: "Administração", admin: true, descricao: "Contas e perfis de acesso" },
+  { to: "/auditoria", rotulo: "Auditoria", icone: "usuarios", grupo: "Administração", admin: true, descricao: "Registro de operações administrativas e de negócio" },
 ];
 
 export const MENU = [
