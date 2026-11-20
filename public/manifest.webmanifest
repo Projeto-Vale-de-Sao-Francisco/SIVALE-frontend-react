@@ -1,0 +1,10 @@
+{
+  "name": "Campo Vivo · Monitoramento Agrícola",
+  "short_name": "Campo Vivo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2F3EF",
+  "theme_color": "#2F8F46",
+  "lang": "pt-BR",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

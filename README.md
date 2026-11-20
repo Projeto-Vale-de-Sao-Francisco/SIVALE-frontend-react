@@ -1,55 +1,43 @@
-# SIVALE — Frontend
+# Campo Vivo · Monitoramento Agrícola IoT (React + Vite)
 
-Interface web/PWA do Projeto Integrador do Vale do São Francisco.
+Front-end do sistema de monitoramento agrícola, migrado do protótipo HTML para **React 18 + Vite 5**, com **mapa real (Leaflet + imagens de satélite Esri / OpenStreetMap)** e layout responsivo (desktop, tablet e celular). Também pode ser instalado como PWA (manifest incluso).
 
-Este projeto não contém backend próprio. Todas as informações são consumidas da API Chico Talhão publicada em:
+## Como rodar
 
-`https://chico-talhao-backend.onrender.com`
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # gera /dist
+npm run preview    # serve o /dist
+```
+
+## API
+
+Copie `.env.example` para `.env`:
+
+```
+VITE_API_URL=http://localhost:3000/api
+VITE_USE_MOCK=true    # false = usa a API real
+```
+
+Os endpoints e os formatos estão em `API.md`. Os adaptadores ficam em `src/api/client.js` (objeto `MAP`).
+Os talhões usam **GeoJSON real** (lon, lat). Agora o cliente só converte para [lat, lng], sem a projeção de pixels.
 
 ## Estrutura
 
-```text
-sivale/
-├── frontend/   React + Vite + TypeScript
-└── docs/       Documentação de referência do projeto
+```
+src/
+  api/client.js            cliente REST + adaptadores
+  data/mock.js             dados de demonstração (3 fazendas com coordenadas reais)
+  state/store.jsx          estado global, carregamento da API, ações
+  state/model.js           valores derivados (talhões da fazenda, sensores, alertas, perfis)
+  lib/geo.js               área geodésica, centroide, limites
+  components/map/FarmMap   mapa Leaflet (satélite/ruas, rótulos, sensores, desenho, minimapa)
+  components/ui            Seg, Dropdown, DataTable responsiva, LineChart, Dialog…
+  components/layout        Sidebar, Header, navegação mobile
+  components/overlays      cadastros, seletor de fazenda, notificações, exportação, sair
+  screens/                 as 11 telas + login
 ```
 
-## Executar localmente
-
-Requisitos: Node.js e npm.
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-A aplicação fica disponível em `http://127.0.0.1:5173`.
-
-Durante o desenvolvimento, o frontend usa `/api` e o proxy configurado no Vite encaminha as requisições para o backend no Render. Isso evita bloqueios de CORS no navegador local.
-
-## Configuração
-
-- `.env`: `VITE_API_URL=/api` para desenvolvimento local.
-- `.env.production`: URL pública do backend Chico Talhão.
-- `vite.config.ts`: proxy local de `/api` para o Render.
-
-## Verificação
-
-```bash
-cd frontend
-npm test -- --run
-npm run build
-```
-
-## Funcionalidades mantidas
-
-- autenticação e encerramento de sessão;
-- mapa e resumo climático;
-- histórico de leituras;
-- alertas;
-- lotes, culturas e dispositivos;
-- mercado e logística;
-- administração de usuários.
-
-Telas e chamadas que não possuem endpoint correspondente no backend Chico Talhão foram removidas.
+## Perfis de demonstração
+Na tela de login, escolha Administrador, Produtor, Analista ou Operador. No modo demo, qualquer senha funciona. O menu é filtrado pela matriz de acesso.
