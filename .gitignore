@@ -3,6 +3,5 @@ dist
 .env
 .env.local
 .env.production
-frontend/*.tsbuildinfo
-frontend/.env.*.local
-
+*.tsbuildinfo
+.env.*.local
